@@ -1989,9 +1989,8 @@ def _pic_swarm_in_plex(dmplex, coords, comm=COMM_WORLD):
         raise ValueError("Point coordinates list shape unsupported")
     swarm.setCoordinateDim(coordsdim)
 
-    # If (x,1) array, make into (x,) vector
     if coordsdim == 1:
-        np.reshape(coords, (len(coords),))
+        raise NotImplementedError("1D DMSwarm not yet supported")
 
     # Link to DMPlex cells information for when swarm.migrate() is used
     swarm.setCellDM(dmplex)
