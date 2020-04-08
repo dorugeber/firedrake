@@ -1830,6 +1830,7 @@ def VertexOnlyMesh(mesh, vertexcoords, comm=COMM_WORLD):
     """
 
     import firedrake.functionspace as functionspace
+    import firedrake.function as function
 
     mesh.init()
 
