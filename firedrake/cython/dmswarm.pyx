@@ -391,3 +391,58 @@ def reordered_coords(PETSc.DM swarm, PETSc.Section global_numbering, shape):
     swarm.restoreField("DMSwarmPIC_coor")
 
     return coords
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def remove_ghosts_pic(PETSc.DM swarm, PETSc.DM plex):
+    """Remove DMSwarm PICs which are in ghost cells of a distributed
+    DMPlex.
+
+    :arg swarm: The DMSWARM which has been associated with the input
+        DMPlex `plex` using PETSc `DMSwarmSetCellDM`.
+    :arg plex: The DMPlex which is associated with the input DMSWARM
+        `swarm`
+    """
+    cdef:
+        PetscInt cStart, cEnd, ncells, i, npics
+        PETSc.SF sf
+        PetscInt nroots, nleaves
+        const PetscInt *ilocal = NULL
+        const PetscSFNode *iremote = NULL
+        np.ndarray[PetscInt, ndim=1, mode="c"] pic_cell_indices
+        np.ndarray[PetscInt, ndim=1, mode="c"] ghost_cell_indices
+
+    # check doesn't work right now
+    # assert plex is swarm.getCellDM().dm
+
+    if plex.comm.size > 1:
+
+        cStart, cEnd = plex.getHeightStratum(0)
+        ncells = cEnd - cStart
+
+        # Get full list of cell indices for particles
+        pic_cell_indices = np.copy(swarm.getField("DMSwarm_cellid"))
+        swarm.restoreField("DMSwarm_cellid")
+        npics = len(pic_cell_indices)
+
+        # Initialise with zeros since these can't be valid ranks or cell ids
+        ghost_cell_indices = np.full(ncells, -1, dtype=IntType)
+
+        # Search for ghost cell indices (spooky!)
+        sf = plex.getPointSF()
+        CHKERR(PetscSFGetGraph(sf.sf, &nroots, &nleaves, &ilocal, &iremote))
+        for i in range(nleaves):
+            if cStart <= ilocal[i] < cEnd:
+                # NOTE need to check this is correct index. Can I check the labels some how?
+                ghost_cell_indices[ilocal[i] - cStart] = ilocal[i]
+
+        # trim -1's to reduce searching needed
+        ghost_cell_indices = ghost_cell_indices[ghost_cell_indices != -1]
+
+        # remove swarm pic parent cell indices which match ghost cell indices
+        for i in range(npics-1, -1, -1):
+            if np.isin(pic_cell_indices[i], ghost_cell_indices):
+                # removePointAtIndex shift cell numbers down by 1
+                swarm.removePointAtIndex(i)
+
+    return
