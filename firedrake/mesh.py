@@ -1056,7 +1056,8 @@ class VertexOnlyMeshTopology(MeshTopology):
 
         tdim = 0
 
-        self._ufl_cell = ufl.Cell("vertex")
+        cell = ufl.Cell("vertex")
+        self._ufl_mesh = ufl.Mesh(ufl.VectorElement("Lagrange", cell, 1, dim=cell.topological_dimension()))
 
         # A set of weakrefs to meshes that are explicitly labelled as being
         # parallel-compatible for interpolation/projection/supermeshing
