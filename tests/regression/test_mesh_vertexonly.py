@@ -42,6 +42,20 @@ parentmeshes = [
 ]
 
 
+"""Number of random coordinates"""
+ncoords = [0, 1, 100]
+
+
+def random_coords(n, gdim):
+    """
+    Get an array of `n` random coordinates with coordinate elements
+    between -0.5 and 1.5. The number of elements per coordinate is given
+    by `gdim`.
+    """
+    a, b = -0.5, 1.5
+    return (b - a) * np.random.random_sample(size=(n, gdim)) + a
+
+
 # pic swarm tests
 
 @pytest.mark.parametrize("parentmesh", parentmeshes)
@@ -95,8 +109,6 @@ def test_pic_swarm_in_plex(parentmesh):
     cell_indexes = parentmesh.cell_closure[:, -1]
     for index in localparentcellindices:
         assert np.any(index == cell_indexes)
-    # Check each point has the correct cell index associated with it
-    # TODO
 
 
 @pytest.mark.parallel
@@ -117,26 +129,36 @@ def test_pic_swarm_in_plex_2d_3procs():
 
 # Mesh Generation Tests
 
-
-def verify_vertexonly_mesh(m, vm, inputvertexcoords, inputvertexcoordslocal, gdim):
-    """Assumes all inputvertexcoordslocal are the correct process local
-    vertex coords in the vm"""
+def verify_vertexonly_mesh(m, vm, inputvertexcoords, gdim):
+    """
+    Check that VertexOnlyMesh `vm` immersed in parent mesh `v` with
+    creation coordinates `inputvertexcoords` and geometric dimension
+    `gdim` behaves as expected. `inputvertexcoords` should be the same
+    for all MPI ranks to avoid hanging.
+    """
     assert m.geometric_dimension() == gdim
     # Correct dims
     assert vm.geometric_dimension() == gdim
     assert vm.topological_dimension() == 0
     # Can initialise
     vm.init()
+    # Find in-bounds and non-halo-region input coordinates
+    in_bounds = []
+    core, owned, ghost = m.cell_set.sizes
+    for i in range(len(inputvertexcoords)):
+        cell_id = m.locate_cell(inputvertexcoords[i])
+        if cell_id is not None and cell_id < owned:
+            in_bounds.append(i)
     # Correct coordinates (though not guaranteed to be in same order)
-    assert np.shape(vm.coordinates.dat.data_ro) == np.shape(inputvertexcoordslocal)
-    assert np.all(np.isin(inputvertexcoordslocal, vm.coordinates.dat.data_ro))
+    assert np.shape(vm.coordinates.dat.data_ro) == np.shape(inputvertexcoords[in_bounds])
+    assert np.all(np.isin(inputvertexcoords[in_bounds], vm.coordinates.dat.data_ro))
     # Correct parent topology
     assert vm._parent_mesh is m.topology
     # Check other properties
-    assert np.shape(vm.cell_closure) == (len(inputvertexcoordslocal), 1)
+    assert np.shape(vm.cell_closure) == (len(inputvertexcoords[in_bounds]), 1)
     with pytest.raises(AttributeError):
         vm.cell_to_facets
-    assert vm.num_cells() == len(inputvertexcoordslocal) == vm.cell_set.size
+    assert vm.num_cells() == len(inputvertexcoords[in_bounds]) == vm.cell_set.size
     assert vm.num_facets() == 0
     assert vm.num_faces() == vm.num_entities(2) == 0
     assert vm.num_edges() == vm.num_entities(1) == 0
@@ -144,16 +166,49 @@ def verify_vertexonly_mesh(m, vm, inputvertexcoords, inputvertexcoordslocal, gdi
 
 
 @pytest.mark.parametrize("parentmesh", parentmeshes)
-def test_generate(parentmesh):
+def test_generate_cell_midpoints(parentmesh):
+    """
+    Generate cell midpoints for mesh m and check they lie in the correct cells
+    """
     inputcoords, inputcoordslocal = cell_midpoints(parentmesh)
     vm = VertexOnlyMesh(parentmesh, inputcoords)
-    verify_vertexonly_mesh(parentmesh, vm, inputcoords, inputcoordslocal, parentmesh.geometric_dimension())
+    # Midpoints located in correct cells of parent mesh
+    V = VectorFunctionSpace(parentmesh, "DG", 0)
+    f = Function(V).interpolate(parentmesh.coordinates)
+    # Check size of biggest len(vm.coordinates.dat.data_ro) so
+    # locate_cell can be called on every processor
+    max_len = MPI.COMM_WORLD.allreduce(len(vm.coordinates.dat.data_ro), op=MPI.SUM)
+    out_of_mesh_point = np.empty(shape=(1, parentmesh.geometric_dimension()))
+    out_of_mesh_point.fill(np.inf)
+    for i in range(max_len):
+        if i < len(vm.coordinates.dat.data_ro):
+            cell_id = parentmesh.locate_cell(vm.coordinates.dat.data_ro[i])
+        else:
+            cell_id = parentmesh.locate_cell(out_of_mesh_point)  # should return None
+        if cell_id is not None:
+            assert all(f.dat.data_ro[cell_id] == vm.coordinates.dat.data_ro[i])
 
 
-@pytest.mark.parallel(nprocs=2)
+@pytest.mark.parallel
 @pytest.mark.parametrize("parentmesh", parentmeshes)
-def test_generate_parallel(parentmesh):
-    test_generate(parentmesh)
+def test_generate_cell_midpoints_parallel(parentmesh):
+    test_generate_cell_midpoints(parentmesh)
+
+
+@pytest.mark.parametrize("parentmesh", parentmeshes)
+@pytest.mark.parametrize("n", ncoords)
+def test_generate_random(parentmesh, n):
+    gdim = parentmesh.geometric_dimension()
+    inputcoords = random_coords(n, gdim)
+    vm = VertexOnlyMesh(parentmesh, inputcoords)
+    verify_vertexonly_mesh(parentmesh, vm, inputcoords, gdim)
+
+
+@pytest.mark.parallel
+@pytest.mark.parametrize("parentmesh", parentmeshes)
+@pytest.mark.parametrize("n", ncoords)
+def test_generate_random_parallel(parentmesh, n):
+    test_generate_random(parentmesh, n)
 
 
 @pytest.mark.parametrize("parentmesh", parentmeshes)
@@ -183,48 +238,70 @@ def functionspace_tests(vm, family, degree):
         g.project(x)
     elif gdim == 2:
         x, y = SpatialCoordinate(vm)
-        f.interpolate(x+y)
-        g.project(x+y)
+        f.interpolate(x*y)
+        g.project(x*y)
     elif gdim == 3:
         x, y, z = SpatialCoordinate(vm)
-        f.interpolate(x+y+z)
-        g.project(x+y+z)
+        f.interpolate(x*y*z)
+        g.project(x*y*z)
     # Get exact values at coordinates with maintained ordering
     assert np.shape(f.dat.data_ro)[0] == np.shape(vm.coordinates.dat.data_ro)[0]
-    assert np.allclose(f.dat.data_ro, np.sum(vm.coordinates.dat.data_ro, 1))
-    # Projection is the same as interpolation
+    assert np.allclose(f.dat.data_ro, np.prod(vm.coordinates.dat.data_ro, 1))
+    # Galerkin Projection of expression is the same as interpolation of
+    # that expression since both exactly point evaluate the expression.
     assert np.allclose(f.dat.data_ro, g.dat.data_ro)
-    # Assembly works as expected
+    # Assembly works as expected - global assembly (integration) of a
+    # constant on a vertex only mesh is evaluation of that constant
+    # num_vertices (globally) times
     f.interpolate(Constant(2))
     assert np.isclose(assemble(f*dx), 2*num_cells_mpi_global)
 
 
 def vectorfunctionspace_tests(vm, family, degree):
+    # Prep: Get number of cells
+    num_cells_mpi_global = MPI.COMM_WORLD.allreduce(vm.num_cells(), op=MPI.SUM)
     # Can create function space
     V = VectorFunctionSpace(vm, family, degree)
-    # Can create function on function spaces
+    # Can create functions on function spaces
     f = Function(V)
-    # Can interpolate onto functions
+    g = Function(V)
+    # Can interpolate and Galerkin project onto functions
     x = SpatialCoordinate(vm)
     f.interpolate(2*as_vector(x))
+    g.project(2*as_vector(x))
     # Get exact values at coordinates with maintained ordering
     assert np.shape(f.dat.data_ro)[0] == np.shape(vm.coordinates.dat.data_ro)[0]
     assert np.allclose(f.dat.data_ro, 2*vm.coordinates.dat.data_ro)
-    # TODO add assembly and Galerkin projection
+    # Galerkin Projection of expression is the same as interpolation of
+    # that expression since both exactly point evaluate the expression.
+    assert np.allclose(f.dat.data_ro, g.dat.data_ro)
+    # Assembly works as expected - global assembly (integration) of a
+    # constant on a vertex only mesh is evaluation of that constant
+    # num_vertices (globally) times. Note that we get a vertex cell for
+    # each geometric dimension so we have to sum over geometric
+    # dimension too.
+    gdim = vm.geometric_dimension()
+    if gdim == 1:
+        f.interpolate(Constant((1,)))
+    if gdim == 2:
+        f.interpolate(Constant((1, 1)))
+    if gdim == 3:
+        f.interpolate(Constant((1, 1, 1)))
+    assert np.isclose(assemble(inner(f, f)*dx), num_cells_mpi_global*gdim)
 
 
 """Families and degrees to test function spaces on VertexOnlyMesh"""
 families_and_degrees = [
     ("DG", 0),
-    pytest.param("DG", 1, marks=pytest.mark.xfail(reason="unsupported degree")),
     pytest.param("CG", 1, marks=pytest.mark.xfail(reason="unsupported family and degree"))
 ]
 
 
 @pytest.mark.parametrize("parentmesh", parentmeshes)
+@pytest.mark.parametrize("n", ncoords)
 @pytest.mark.parametrize(("family", "degree"), families_and_degrees)
-def test_functionspaces(parentmesh, family, degree):
-    vertexcoords, vertexcoordslocal = cell_midpoints(parentmesh)
+def test_functionspaces(parentmesh, n, family, degree):
+    vertexcoords = random_coords(n, parentmesh.geometric_dimension())
     vm = VertexOnlyMesh(parentmesh, vertexcoords)
     functionspace_tests(vm, family, degree)
     vectorfunctionspace_tests(vm, family, degree)
@@ -232,6 +309,7 @@ def test_functionspaces(parentmesh, family, degree):
 
 @pytest.mark.parallel
 @pytest.mark.parametrize("parentmesh", parentmeshes)
+@pytest.mark.parametrize("n", ncoords)
 @pytest.mark.parametrize(("family", "degree"), families_and_degrees)
-def test_functionspaces_parallel(parentmesh, family, degree):
-    test_functionspaces(parentmesh, family, degree)
+def test_functionspaces_parallel(parentmesh, n, family, degree):
+    test_functionspaces(parentmesh, n, family, degree)
