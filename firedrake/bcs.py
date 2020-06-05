@@ -26,7 +26,7 @@ from firedrake import replace
 from firedrake import solving
 from firedrake.adjoint.dirichletbc import DirichletBCMixin
 
-__all__ = ['DirichletBC', 'homogenize', 'EquationBC']
+__all__ = ['DirichletBC', 'homogenize', 'EquationBC', 'extract_equation_bc_forms']
 
 
 class BCBase(object):
@@ -630,3 +630,23 @@ def homogenize(bc):
         return DirichletBC(bc.function_space(), 0, bc.sub_domain)
     else:
         raise TypeError("homogenize only takes a DirichletBC or a list/tuple of DirichletBCs")
+
+
+def extract_equation_bc_forms(bcs, form_type):
+    r"""Collect :class:`.EquationBCSplit`s from :class:`.EquationBC`s.
+
+    :arg bcs: Boundary condition object(s) used in assembly.
+       If :class:`.EquationBC`s are found, appropriate instances of
+       :class:`.EquationBCSplit`s are extracted.
+    :arg form_type: Form to assemble; 'F', 'J', or 'Jp'.
+    """
+    from firedrake.solving import _extract_bcs
+    bcs = _extract_bcs(bcs)
+    if form_type == 'F':
+        return tuple(bc if isinstance(bc, DirichletBC) else bc._F for bc in bcs)
+    elif form_type == 'J':
+        return tuple(bc if isinstance(bc, DirichletBC) else bc._J for bc in bcs)
+    elif form_type == 'Jp':
+        return tuple(bc if isinstance(bc, DirichletBC) else bc._Jp for bc in bcs)
+    else:
+        raise TypeError("Unknown form_type: 'form_type' must be 'F', 'J', or 'Jp'.")

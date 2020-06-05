@@ -15,7 +15,7 @@ from firedrake import solving
 from firedrake import utils
 from firedrake.slate import slate
 from firedrake.slate import slac
-from firedrake.bcs import DirichletBC, EquationBCSplit
+from firedrake.bcs import DirichletBC, EquationBC, EquationBCSplit, extract_equation_bc_forms
 from firedrake.utils import ScalarType
 from firedrake.adjoint import annotate_assemble
 
@@ -228,6 +228,12 @@ def _assemble(f, tensor=None, bcs=None, form_compiler_parameters=None,
         if domain is not None and domain.topology != topology:
             raise NotImplementedError("Assembly with multiple meshes not supported.")
 
+    rank = len(f.arguments())
+    if diagonal:
+        assert rank == 2
+    is_mat = rank == 2 and not diagonal
+    is_vec = rank == 1 or diagonal
+
     if isinstance(f, slate.TensorBase):
         if diagonal:
             raise NotImplementedError("Diagonal + slate not supported")
@@ -238,14 +244,17 @@ def _assemble(f, tensor=None, bcs=None, form_compiler_parameters=None,
         integral_types = [integral.integral_type() for integral in f.integrals()]
 
         if bcs is not None:
+            if any(isinstance(bc, EquationBC) for bc in bcs):
+                if rank == 1:
+                    bcs = extract_equation_bc_forms(bcs, 'F')
+                elif rank == 2:
+                    raise RuntimeError("Unable to infer 'form_type' to be used ('J' or 'Jp'): \
+Preprocess `bcs` either with: \
+`bcs = extract_equation_bc_forms(bcs, 'J')`, \
+or with \
+`bcs = extract_equation_bc_forms(bcs, 'Jp')`.")
             for bc in bcs:
                 integral_types += [integral.integral_type() for integral in bc.integrals()]
-
-    rank = len(f.arguments())
-    if diagonal:
-        assert rank == 2
-    is_mat = rank == 2 and not diagonal
-    is_vec = rank == 1 or diagonal
 
     if any((coeff.function_space() and coeff.function_space().component is not None)
            for coeff in f.coefficients()):
