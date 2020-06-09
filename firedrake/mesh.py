@@ -1009,6 +1009,18 @@ class ExtrudedMeshTopology(MeshTopology):
             cell_list += list(range(col, col + (self.layers - 1)))
         return cell_data[cell_list]
 
+class VertexOnlyMeshTopology(MeshTopology):
+    """Representation of a vertex-only mesh topology."""
+
+    def __init__(self, plex, swarm):
+        """
+        # to redo
+        """
+
+        mesh.init()
+        # todo...
+
+
 
 class MeshGeometry(ufl.Mesh, MeshGeometryMixin):
     """A representation of mesh topology and geometry."""
@@ -1535,6 +1547,46 @@ def ExtrudedMesh(mesh, layers, layer_height=None, extrusion_type='uniform', kern
                                     layer_height, extrusion_type="radial", kernel=kernel)
 
     return self
+
+def VertexOnlyMesh(mesh, vertexcoords, comm=COMM_WORLD):
+    """
+    Create a vertex only mesh, immersed in a given mesh, with vertices
+    defined by a list of coordinates.
+
+    :arg mesh: The unstructured mesh in which to immerse the vertex only
+    mesh.
+    :arg vertexcoords: A list of coordinate tuples which defines the vertices.
+    :kwarg comm: Optional communicator to build the mesh on (defaults to
+        COMM_WORLD).
+    """
+
+    import firedrake.functionspace as functionspace
+
+    mesh.init()
+    vertexcoords = np.asarray(vertexcoords, dtype=np.double)
+    tdim = mesh.topological_dimension()
+    pdim = np.shape(vertexcoords)[1]
+    if pdim != tdim:
+        raise ValueError(f"Mesh topological dimension {tdim} must match point list dimension {pdim}")
+
+    swarm = _pic_swarm_in_plex(mesh.topology._plex, vertexcoords)
+
+    # Topology
+    # Not quite sure how to do topology yet!
+    # Should VertexOnlyMeshTopology inherit from MeshTopology which
+    # expects a DMPlex?
+    # topology = VertexOnlyMeshTopology(mesh.topology, swarm)
+
+    # Geometry
+    # Can I set from coordinates (which is a firedrake Function)? If so,
+    # what mesh should it be defined on?
+    # How would I deal with the points moving if the geometry is set by
+    # a function?
+    element = ufl.FiniteElement("DG", ufl.interval, 0)
+    newmesh = MeshGeometry.__new__(MeshGeometry, element)
+
+
+    self._base_mesh = mesh
 
 def _pic_swarm_in_plex(dmplex, coords, comm=COMM_WORLD):
     """
