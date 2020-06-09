@@ -1825,6 +1825,9 @@ def _pic_swarm_in_plex(dmplex, coords, comm=COMM_WORLD):
     # all ranks to search for the given coordinates within their cell.
     swarm.setPointCoordinates(coords, redundant=False, mode=PETSc.InsertMode.INSERT_VALUES)
 
+    # Remove PICs which have been placed into ghost cells of a distributed DMPlex
+    dmswarm.remove_ghosts_pic(swarm, plex)
+
     # Some different method of matching points to cells will need to be
     # used for bendy meshes since PETSc only supports straight-edged
     # mesh topologies.
