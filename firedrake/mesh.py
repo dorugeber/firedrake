@@ -1118,7 +1118,7 @@ class VertexOnlyMeshTopology(MeshTopology):
 
     @utils.cached_property
     def cell_to_facets(self):
-        """Raises an AttributeError since cells in a 
+        """Raises an AttributeError since cells in a
         `VertexOnlyMeshTopology` have no facets.
         """
         raise AttributeError("Cells in a VertexOnlyMeshTopology have no facets.")
@@ -1760,7 +1760,7 @@ def VertexOnlyMesh(mesh, vertexcoords, comm=COMM_WORLD):
     element = ufl.FiniteElement("DG", cell, 0)
     newmesh = MeshGeometry.__new__(MeshGeometry, element)
 
-def _pic_swarm_in_plex(dmplex, coords, comm=COMM_WORLD):
+def _pic_swarm_in_plex(plex, coords, comm=COMM_WORLD):
     """
     Create a Particle In Cell (PIC) DMSwarm, immersed in a DMPlex
     at given point coordinates.
@@ -1772,7 +1772,7 @@ def _pic_swarm_in_plex(dmplex, coords, comm=COMM_WORLD):
     straight edges. If not, the particles may be placed in the wrong
     cells.
 
-    :arg dmplex: the DMPlex within with the DMSwarm should be
+    :arg plex: the DMPlex within with the DMSwarm should be
         immersed.
     :arg coords: a list of point coordinate tuples at which to create
         the particles.
@@ -1791,7 +1791,7 @@ def _pic_swarm_in_plex(dmplex, coords, comm=COMM_WORLD):
     #     dimension of a mesh (which would be 0). In all PETSc examples
     #     the dimension of the DMSwarm is set to match that of the
     #     DMPlex used with swarm.setCellDM
-    swarm.setDimension(dmplex.getDimension())
+    swarm.setDimension(plex.getDimension())
 
     # Set coordinates dimension
     if len(np.shape(coords)) == 1:
@@ -1806,7 +1806,7 @@ def _pic_swarm_in_plex(dmplex, coords, comm=COMM_WORLD):
         raise NotImplementedError("1D DMSwarm not yet supported")
 
     # Link to DMPlex cells information for when swarm.migrate() is used
-    swarm.setCellDM(dmplex)
+    swarm.setCellDM(plex)
 
     # Set to Particle In Cell (PIC) type
     swarm.setType(PETSc.DMSwarm.Type.PIC)
