@@ -1536,6 +1536,58 @@ def ExtrudedMesh(mesh, layers, layer_height=None, extrusion_type='uniform', kern
 
     return self
 
+def _pic_swarm_in_plex(dmplex, coords, comm=COMM_WORLD):
+    """
+    Create a Particle In Cell (PIC) DMSwarm, immersed in a DMPlex
+    at given point coordinates.
+
+    Note that, at present, no fields are associated with the DMSwarm
+    particles.
+
+    :arg dmplex: the DMPlex within with the DMSwarm should be
+        immersed.
+    :arg coords: the point coordinates at which to create the
+        particles.
+    :kwarg comm: Optional communicator to build the mesh on
+        (defaults to COMM_WORLD).
+    :return: the immersed DMSwarm
+    """
+
+    coords = np.asarray(coords, dtype=np.double)
+
+    # Create a DMSWARM
+    swarm = PETSc.DMSwarm().create(comm=comm)
+
+    # Set swarm DM dimension to match DMPlex dimension
+    swarm.setDimension(dmplex.getDimension())
+
+    # Set coordinates dimension
+    swarm.setCoordinateDim(np.shape(coords)[1])
+
+    # Link to DMPlex cells information for when swarm.migrate() is used
+    swarm.setCellDM(dmplex)
+
+    # Set to Particle In Cell (PIC) type
+    swarm.setType(PETSc.DMSwarm.Type.PIC)
+
+    # Setup particle information as though there is a field associated
+    # with the point coordinates, but don't actually register any fields.
+    # An example of setting a field is left for reference.
+    # blocksize = 1
+    # swarm.registerField("somefield", blocksize)
+    swarm.finalizeFieldRegister()
+
+    # Note that no new fields can now be associated with the DMSWARM.
+
+    # Add point coordinates - note we set redundant mode to False since
+    # all MPI ranks are given the same list of coordinates. This forces
+    # all ranks to search for the given coordinates within their cell.
+    swarm.setPointCoordinates(coords, redundant=False, mode=PETSc.InsertMode.INSERT_VALUES)
+
+    # # not clear if this needed when running on multiple MPI ranks?
+    # swarm.migrate()
+
+    return swarm
 
 def SubDomainData(geometric_expr):
     """Creates a subdomain data object from a boolean-valued UFL expression.
