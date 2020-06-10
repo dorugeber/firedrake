@@ -1320,8 +1320,32 @@ values from f.)"""
         :arg x: point coordinates
         :kwarg tolerance: for checking if a point is in a cell. Default
             is None.
-        :returns: cell number (int), or None (if the point is not 
+        :returns: cell number (int), or None (if the point is not
             in the domain)
+        """
+        return self.locate_cell_and_reference_coordinates(x, tolerance=tolerance)[0]
+
+    def reference_coordinates(self, x, tolerance=None):
+        """Get reference coordinates of a given point in its cell. Which
+        cell the point is in can be queried with the locate_cell method.
+
+        :arg x: point coordinates
+        :kwarg tolerance: for checking if a point is in a cell. Default
+            is None.
+        :returns: reference coordinates within cell (numpy array) or
+            None (if the point is not in the domain)
+        """
+        return self.locate_cell_and_reference_coordinates(x, tolerance=tolerance)[1]
+
+    def locate_cell_and_reference_coordinates(self, x, tolerance=None):
+        """Locate cell containing a given point and the reference
+        coordinates of the point within the cell.
+
+        :arg x: point coordinates
+        :kwarg tolerance: for checking if a point is in a cell. Default
+            is None.
+        :returns: tuple either (cell number, reference coordinates)
+            (int, numpy array), or (None, None) (point is not in the domain)
         """
         if self.variable_layers:
             raise NotImplementedError("Cell location not implemented for variable layers")
@@ -1333,33 +1357,9 @@ values from f.)"""
                                                     x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                                                     X.ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
         if cell == -1:
-            return None
+            return (None, None)
         else:
-            return cell
-
-    def reference_coordinates(self, x, tolerance=None):
-        """Get reference coordinates of a given point in its cell. Which
-        cell the point is in can be queried with the locate_cell method.
-
-        :arg x: point coordinates
-        :kwarg tolerance: for checking if a point is in a cell. Default
-            is None.
-        :returns: reference coordinates within cell (numpy array) or 
-            None (if the point is not in the domain)
-        """
-        if self.variable_layers:
-            raise NotImplementedError("Cell reference coordinates not implemented for variable layers")
-        x = np.asarray(x, dtype=utils.ScalarType)
-        if x.size != self.geometric_dimension():
-            raise ValueError("Point coordinate dimension does not match mesh geometric dimension")
-        X = np.empty_like(x)
-        cell = self._c_locator(tolerance=tolerance)(self.coordinates._ctypes,
-                                                    x.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                                                    X.ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
-        if cell == -1:
-            return None
-        else:
-            return X
+            return cell, X
 
     def _c_locator(self, tolerance=None):
         from pyop2 import compilation
