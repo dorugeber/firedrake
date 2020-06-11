@@ -1037,10 +1037,6 @@ class VertexOnlyMeshTopology(MeshTopology):
         if reorder is True:
             raise NotImplementedError("Mesh reordering not implemented for vertex only meshes yet.")
 
-        # BEGIN TODO
-        # dmplex.validate_mesh(plex) # create equivalent for DMSwarm?
-        # END TODO
-
         swarm.setFromOptions()
 
         utils._init()
