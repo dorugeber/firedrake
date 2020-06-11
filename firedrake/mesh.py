@@ -1057,12 +1057,6 @@ class VertexOnlyMeshTopology(MeshTopology):
         cell = ufl.Cell("vertex")
         self._ufl_mesh = ufl.Mesh(ufl.VectorElement("DG", cell, 0, dim=cell.topological_dimension()))
 
-        # A set of weakrefs to meshes that are explicitly labelled as being
-        # parallel-compatible for interpolation/projection/supermeshing
-        # To set, do e.g.
-        # target_mesh._parallel_compatible = {weakref.ref(source_mesh)}
-        self._parallel_compatible = None
-
         def callback(self):
             """Finish initialisation."""
             del self._callback
