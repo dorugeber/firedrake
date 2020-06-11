@@ -162,7 +162,8 @@ def verify_vertexonly_mesh(m, vm, inputvertexcoords, gdim):
     assert np.shape(vm.coordinates.dat.data_ro) == np.shape(inputvertexcoords[in_bounds])
     assert np.all(np.isin(inputvertexcoords[in_bounds], vm.coordinates.dat.data_ro))
     # Correct parent topology
-    assert vm._parent_mesh is m.topology
+    assert vm._parent_mesh is m
+    assert vm.topology._parent_mesh is m.topology
     # Correct generic cell properties
     assert np.shape(vm.cell_closure) == (len(inputvertexcoords[in_bounds]), 1)
     with pytest.raises(AttributeError):
