@@ -1686,7 +1686,7 @@ def VertexOnlyMesh(mesh, vertexcoords, comm=COMM_WORLD):
     defined by a list of coordinates.
 
     :arg mesh: The unstructured mesh in which to immerse the vertex only
-    mesh.
+        mesh.
     :arg vertexcoords: A list of coordinate tuples which defines the vertices.
     :kwarg comm: Optional communicator to build the mesh on (defaults to
         COMM_WORLD).
