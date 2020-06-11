@@ -1077,7 +1077,7 @@ class VertexOnlyMeshTopology(MeshTopology):
 
         self._callback = callback
 
-    @property
+    @utils.cached_property
     def cell_closure(self):
         """2D array of ordered cell closures
 
