@@ -1759,8 +1759,7 @@ def _pic_swarm_in_plex(plex, coords, **kwargs):
 
     :arg plex: the DMPlex within with the DMSwarm should be
         immersed.
-    :arg coords: a list of point coordinate tuples at which to create
-        the particles.
+    :arg coords: an `ndarray` of (npoints, coordsdim) shape.
     :kwarg comm: Optional communicator to build the mesh on
         (defaults to match `plex` communicator).
     :kwarg fieldnames: An optional list of field names for fields to
@@ -1787,12 +1786,7 @@ def _pic_swarm_in_plex(plex, coords, **kwargs):
     swarm.setDimension(plex.getDimension())
 
     # Set coordinates dimension
-    if len(coords.shape) == 1:
-        coordsdim = 1
-    elif len(coords.shape) == 2:
-        _, coordsdim = coords.shape
-    else:
-        raise ValueError("Point coordinates list shape unsupported")
+    npoints, coordsdim = coords.shape
     swarm.setCoordinateDim(coordsdim)
 
     if coordsdim == 1:
