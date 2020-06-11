@@ -1735,6 +1735,7 @@ def VertexOnlyMesh(mesh, vertexcoords, comm=COMM_WORLD):
     # Create mesh object
     vmesh = MeshGeometry.__new__(MeshGeometry, element)
     vmesh._topology = topology
+    vmesh._parent_mesh = mesh
 
     def callback(self):
         """Finish initialisation."""
