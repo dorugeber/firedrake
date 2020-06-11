@@ -1092,17 +1092,16 @@ class VertexOnlyMeshTopology(MeshTopology):
 
         cell = self.ufl_cell()
         assert tdim == cell.topological_dimension()
-        if cell.is_simplex():
-            import FIAT
-            topology = FIAT.ufc_cell(cell).get_topology()
-            entity_per_cell = np.zeros(len(topology), dtype=IntType)
-            for d, ents in topology.items():
-                entity_per_cell[d] = len(ents)
+        assert cell.is_simplex()
 
-            return dmswarm.closure_ordering(swarm, vertex_numbering,
-                                            cell_numbering, entity_per_cell)
-        else:
-            raise NotImplementedError("Cell type '%s' not supported." % cell)
+        import FIAT
+        topology = FIAT.ufc_cell(cell).get_topology()
+        entity_per_cell = np.zeros(len(topology), dtype=IntType)
+        for d, ents in topology.items():
+            entity_per_cell[d] = len(ents)
+
+        return dmswarm.closure_ordering(swarm, vertex_numbering,
+                                        cell_numbering, entity_per_cell)
 
     def _facets(self, kind):
         return None
