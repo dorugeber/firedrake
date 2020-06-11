@@ -455,28 +455,39 @@ def remove_ghosts_pic(PETSc.DM swarm, PETSc.DM plex):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def label_pic_parent_cell_nums(PETSc.DM swarm, parentmesh):
+def label_pic_parent_cell_info(PETSc.DM swarm, parentmesh):
     """
     For each PIC in the input swarm, label its `parentcellnum` field with
-    the relevant cell number from the `parentmesh` in which is it emersed.
-    The cell numbering is that given by the `parentmesh.locate_cell`
-    method.
+    the relevant cell number from the `parentmesh` in which is it emersed
+    and the `refcoord` field with the relevant cell reference coordinate.
+    This information is given by the
+    `parentmesh.locate_cell_and_reference_coordinates` method.
+
+    For a swarm with N PICs emersed in `parentmesh`
+    the `parentcellnum` field is N long and
+    the `refcoord` field is N*parentmesh.topological_dimension() long.
 
     :arg swarm: The DMSWARM which contains the PICs immersed in
         `parentmesh`
     :arg parentmesh: The mesh within with the `swarm` PICs are immersed.
 
     ..note:: All PICs must be within the parentmesh or this will try to
-             assign `None` (returned by `parentmesh.locate_cell`) to a
-             `PetscReal`.
+             assign `None` (returned by
+             `parentmesh.locate_cell_and_reference_coordinates`) to the
+             `parentcellnum` or `refcoord` fields.
+
+
     """
     cdef:
-        PetscInt num_vertices, i, dim
+        PetscInt num_vertices, i, gdim, tdim
         PetscReal parent_cell_num
         np.ndarray[PetscReal, ndim=2, mode="c"] swarm_coords
         np.ndarray[PetscReal, ndim=1, mode="c"] parent_cell_nums
+        np.ndarray[PetscReal, ndim=2, mode="c"] reference_coords
+        np.ndarray[PetscReal, ndim=1, mode="c"] reference_coord
 
-    dim = parentmesh.geometric_dimension()
+    gdim = parentmesh.geometric_dimension()
+    tdim = parentmesh.topological_dimension()
 
     num_vertices = swarm.getLocalSize()
 
@@ -486,22 +497,25 @@ def label_pic_parent_cell_nums(PETSc.DM swarm, parentmesh):
     max_num_vertices = comm.allreduce(num_vertices, op=MPI.SUM)
 
     # Create an out of mesh point to use in locate_cell when needed
-    out_of_mesh_point = np.empty(shape=(1, dim))
+    out_of_mesh_point = np.empty(shape=(1, gdim))
     out_of_mesh_point.fill(np.inf)
 
     # get fields - NOTE aren't copied so could have GC issues!
-    swarm_coords = swarm.getField("DMSwarmPIC_coor").reshape((num_vertices, dim))
+    swarm_coords = swarm.getField("DMSwarmPIC_coor").reshape((num_vertices, gdim))
     parent_cell_nums = swarm.getField("parentcellnum")
+    reference_coords = swarm.getField("refcoord").reshape((num_vertices, tdim))
 
     # find parent cell numbers
     for i in range(max_num_vertices):
         if i < num_vertices:
-            parent_cell_num = parentmesh.locate_cell(swarm_coords[i])
+            parent_cell_num, reference_coord = parentmesh.locate_cell_and_reference_coordinates(swarm_coords[i])
             parent_cell_nums[i] = parent_cell_num
+            reference_coords[i] = reference_coord
         else:
             parentmesh.locate_cell(out_of_mesh_point)  # should return None
 
     # have to restore fields once accessed to allow access again
+    swarm.restoreField("refcoord")
     swarm.restoreField("parentcellnum")
     swarm.restoreField("DMSwarmPIC_coor")
 

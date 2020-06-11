@@ -1756,9 +1756,12 @@ def VertexOnlyMesh(mesh, vertexcoords, comm=COMM_WORLD):
     if mesh.coordinates.function_space().ufl_element().degree() > 1:
         raise NotImplementedError("Only straight edged meshes are supported")
 
-    swarm = _pic_swarm_in_plex(mesh.topology._plex, vertexcoords, fieldnames=["parentcellnum"], blocksizes=[1])
+    # Create DMSwarm for vertex coordinates
+    swarm = _pic_swarm_in_plex(mesh.topology._plex, vertexcoords, fieldnames=["parentcellnum", "refcoord"], blocksizes=[1, tdim])
 
-    dmswarm.label_pic_parent_cell_nums(swarm, mesh)
+    # Find and save parent cell number and reference coordinate (within
+    # reference cell) for each vertex
+    dmswarm.label_pic_parent_cell_info(swarm, mesh)
 
     # Topology
     topology = VertexOnlyMeshTopology(swarm, mesh.topology, name="swarmmesh", reorder=False)
