@@ -1710,7 +1710,7 @@ def VertexOnlyMesh(mesh, vertexcoords, comm=COMM_WORLD):
     if mesh.coordinates.function_space().ufl_element().degree() > 1:
         raise NotImplementedError("Only straight edged meshes are supported")
 
-    swarm = _pic_swarm_in_plex(mesh.topology._plex, vertexcoords, fieldnames=["parentcellnum"], blocksizes=[1])
+    swarm = _pic_swarm_in_plex(mesh.topology._plex, vertexcoords, fields=[("parentcellnum", 1, IntType)])
 
     dmswarm.label_pic_parent_cell_nums(swarm, mesh)
 
@@ -1762,12 +1762,17 @@ def _pic_swarm_in_plex(plex, coords, **kwargs):
     :arg coords: an `ndarray` of (npoints, coordsdim) shape.
     :kwarg comm: Optional communicator to build the mesh on
         (defaults to match `plex` communicator).
-    :kwarg fieldnames: An optional list of field names for fields to
-        register on the swarm.
-    :kwarg blocksizes: An optional list of blocksizes for fields to
-        register on the swarm. If specfied must bo of equal length to
-        `fieldnames`. If not specified, defaults to 1 for all specified
-        `fieldnames`.
+    :kwarg fields: An optional list of named data which can be stored
+        for each point in the DMSwarm. The format should be
+        `[(fieldname1, blocksize1, dtype1),
+          ...,
+         (fieldnameN, blocksizeN, dtypeN)]`.
+        For example, the swarm coordinates themselves are stored in a
+        field named `DMSwarmPIC_coor` which, were in not created
+        automatically, would be initialised with
+        `fields = [("DMSwarmPIC_coor", coordsdim, ScalarType)]`.
+        All fields must have the same number of points. For more
+        information see https://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/DMSWARM/DMSWARM.html
     :return: the immersed DMSwarm
     """
 
@@ -1799,13 +1804,9 @@ def _pic_swarm_in_plex(plex, coords, **kwargs):
     swarm.setType(PETSc.DMSwarm.Type.PIC)
 
     # Register any fields
-    fieldnames = kwargs.get("fieldnames", [])
-    blocksizes = kwargs.get("blocksizes", np.ones(len(fieldnames)))
-    if len(fieldnames) > 0:
-        if len(fieldnames) != len(blocksizes):
-            raise ValueError("The blocksizes list must be the same length as the fieldnames list")
-        for i in range(len(fieldnames)):
-            swarm.registerField(fieldnames[i], blocksizes[i])
+    fields = kwargs.get("fields", [])
+    for i in range(len(fields)):
+        swarm.registerField(fields[i][0], fields[i][1], dtype=fields[i][2])
     swarm.finalizeFieldRegister()
 
     # Note that no new fields can now be associated with the DMSWARM.

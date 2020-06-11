@@ -471,10 +471,9 @@ def label_pic_parent_cell_nums(PETSc.DM swarm, parentmesh):
              `PetscReal`.
     """
     cdef:
-        PetscInt num_vertices, i, dim
-        PetscReal parent_cell_num
+        PetscInt num_vertices, i, dim, parent_cell_num
         np.ndarray[PetscReal, ndim=2, mode="c"] swarm_coords
-        np.ndarray[PetscReal, ndim=1, mode="c"] parent_cell_nums
+        np.ndarray[PetscInt, ndim=1, mode="c"] parent_cell_nums
 
     dim = parentmesh.geometric_dimension()
 

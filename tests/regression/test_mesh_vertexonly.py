@@ -71,9 +71,9 @@ def test_pic_swarm_in_plex(parentmesh):
     parentmesh.init()
     inputpointcoords, inputlocalpointcoords = cell_midpoints(parentmesh)
     plex = parentmesh.topology._plex
-    fieldnames = ["fieldA", "fieldB"]
-    blocksizes = [1, 1]
-    swarm = mesh._pic_swarm_in_plex(plex, inputpointcoords, fieldnames=fieldnames, blocksizes=blocksizes)
+    from firedrake.petsc import PETSc
+    fields = [("fieldA", 1, PETSc.IntType), ("fieldB", 2, PETSc.ScalarType)]
+    swarm = mesh._pic_swarm_in_plex(plex, inputpointcoords, fields=fields)
     # Get point coords on current MPI rank
     localpointcoords = np.copy(swarm.getField("DMSwarmPIC_coor"))
     swarm.restoreField("DMSwarmPIC_coor")
@@ -91,9 +91,11 @@ def test_pic_swarm_in_plex(parentmesh):
     # Tests
 
     # get custom fields on swarm - will fail if didn't get created
-    for fieldname in fieldnames:
-        swarm.getField(fieldname)
-        swarm.restoreField(fieldname)
+    for field in fields:
+        f = swarm.getField(field[0])
+        assert len(f) == field[1]*nptslocal
+        assert f.dtype == field[2]
+        swarm.restoreField(field[0])
     # Check comm sizes match
     assert plex.comm.size == swarm.comm.size
     # Check coordinate list and parent cell indices match
