@@ -1700,7 +1700,7 @@ def VertexOnlyMesh(mesh, vertexcoords, comm=COMM_WORLD):
     vertexcoords = np.asarray(vertexcoords, dtype=np.double)
     gdim = mesh.geometric_dimension()
     tdim = mesh.topological_dimension()
-    pdim = np.shape(vertexcoords)[1]
+    _, pdim = vertexcoords.shape
     if pdim != tdim:
         raise ValueError(f"Mesh topological dimension {tdim} must match point list dimension {pdim}")
 
@@ -1787,10 +1787,10 @@ def _pic_swarm_in_plex(plex, coords, **kwargs):
     swarm.setDimension(plex.getDimension())
 
     # Set coordinates dimension
-    if len(np.shape(coords)) == 1:
+    if len(coords.shape) == 1:
         coordsdim = 1
-    elif len(np.shape(coords)) == 2:
-        coordsdim = np.shape(coords)[1]
+    elif len(coords.shape) == 2:
+        _, coordsdim = coords.shape
     else:
         raise ValueError("Point coordinates list shape unsupported")
     swarm.setCoordinateDim(coordsdim)
