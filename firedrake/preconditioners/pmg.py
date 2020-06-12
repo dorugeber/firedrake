@@ -661,7 +661,7 @@ def prolongation_matrix_aij(Pk, P1, Pk_bcs, P1_bcs):
                          for bc in chain(Pk_bcs_i, P1_bcs_i) if bc is not None)
             matarg = mat[i, i](op2.WRITE, (Pk.sub(i).cell_node_map(), P1.sub(i).cell_node_map()),
                                lgmaps=(rlgmap, clgmap), unroll_map=unroll)
-            op2.par_loop(prolongation_transfer_kernel_full(Pk.sub(i), P1.sub(i)), mesh.cell_set,
+            op2.par_loop(prolongation_transfer_kernel_aij(Pk.sub(i), P1.sub(i)), mesh.cell_set,
                          matarg)
 
     else:
