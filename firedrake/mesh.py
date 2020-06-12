@@ -1680,7 +1680,7 @@ def ExtrudedMesh(mesh, layers, layer_height=None, extrusion_type='uniform', kern
     return self
 
 
-def VertexOnlyMesh(mesh, vertexcoords, comm=COMM_WORLD):
+def VertexOnlyMesh(mesh, vertexcoords):
     """
     Create a vertex only mesh, immersed in a given mesh, with vertices
     defined by a list of coordinates.
@@ -1688,8 +1688,10 @@ def VertexOnlyMesh(mesh, vertexcoords, comm=COMM_WORLD):
     :arg mesh: The unstructured mesh in which to immerse the vertex only
         mesh.
     :arg vertexcoords: A list of coordinate tuples which defines the vertices.
-    :kwarg comm: Optional communicator to build the mesh on (defaults to
-        COMM_WORLD).
+
+    .. note::
+
+        The vertex only mesh uses the same communicator as the input `mesh`.
     """
 
     import firedrake.functionspace as functionspace
@@ -1760,8 +1762,6 @@ def _pic_swarm_in_plex(plex, coords, **kwargs):
     :arg plex: the DMPlex within with the DMSwarm should be
         immersed.
     :arg coords: an `ndarray` of (npoints, coordsdim) shape.
-    :kwarg comm: Optional communicator to build the mesh on
-        (defaults to match `plex` communicator).
     :kwarg fields: An optional list of named data which can be stored
         for each point in the DMSwarm. The format should be
         `[(fieldname1, blocksize1, dtype1),
@@ -1774,14 +1774,16 @@ def _pic_swarm_in_plex(plex, coords, **kwargs):
         All fields must have the same number of points. For more
         information see https://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/DMSWARM/DMSWARM.html
     :return: the immersed DMSwarm
-    """
 
-    comm = kwargs.get("comm", plex.comm)
+    .. note::
+
+        The created DMSwarm uses the communicator of the input DMPlex.
+    """
 
     coords = np.asarray(coords, dtype=np.double)
 
     # Create a DMSWARM
-    swarm = PETSc.DMSwarm().create(comm=comm)
+    swarm = PETSc.DMSwarm().create(comm=plex.comm)
 
     # Set swarm DM dimension to match DMPlex dimension
     # NB: Unlike a DMPlex, this does not correspond to the topological
