@@ -36,32 +36,41 @@ def cell_midpoints(m):
     return midpoints, local_midpoints
 
 
-"""Parent meshes used in tests"""
-parentmeshes = [
-    pytest.param(UnitIntervalMesh(1), marks=pytest.mark.xfail(reason="swarm not implemented in 1d")),
-    UnitSquareMesh(1, 1),
-    pytest.param(ExtrudedMesh(UnitSquareMesh(1, 1), 1), marks=pytest.mark.xfail(reason="extruded meshes not supported")),
-    UnitCubeMesh(1, 1, 1)
-]
+@pytest.fixture(params=[pytest.param("interval", marks=pytest.mark.xfail(reason="swarm not implemented in 1d")),
+                        "square",
+                        pytest.param("extruded", marks=pytest.mark.xfail(reason="extruded meshes not supported")),
+                        "cube"])
+def parentmesh(request):
+    if request.param == "interval":
+        return UnitIntervalMesh(1)
+    elif request.param == "square":
+        return UnitSquareMesh(1, 1)
+    elif request.param == "extruded":
+        return ExtrudedMesh(UnitSquareMesh(1, 1), 1)
+    elif request.param == "cube":
+        return UnitCubeMesh(1, 1, 1)
 
 
-"""Number of random coordinates"""
-ncoords = [0, 1, 100]
+@pytest.fixture(params=[0, 1, 100], ids=lambda x: f"{x}-coords")
+def vertexcoords(request, parentmesh):
+    size = (request.param, parentmesh.geometric_dimension())
+    return pseudo_random_coords(size)
 
 
-def random_coords(n, gdim):
+def pseudo_random_coords(size):
     """
-    Get an array of `n` random coordinates with coordinate elements
-    between -0.5 and 1.5. The number of elements per coordinate is given
-    by `gdim`.
+    Get an array of pseudo random coordinates with coordinate elements
+    between -0.5 and 1.5. The random numbers are consistent for any
+    given `size` since `numpy.random.seed(0)` is called each time this
+    is used.
     """
+    np.random.seed(0)
     a, b = -0.5, 1.5
-    return (b - a) * np.random.random_sample(size=(n, gdim)) + a
+    return (b - a) * np.random.random_sample(size=size) + a
 
 
 # pic swarm tests
 
-@pytest.mark.parametrize("parentmesh", parentmeshes)
 def test_pic_swarm_in_plex(parentmesh):
     """Generate points in cell midpoints of mesh `parentmesh` and check correct
     swarm is created in plex."""
@@ -123,7 +132,6 @@ def test_pic_swarm_in_plex(parentmesh):
 
 
 @pytest.mark.parallel
-@pytest.mark.parametrize("parentmesh", parentmeshes)
 def test_pic_swarm_in_plex_parallel(parentmesh):
     test_pic_swarm_in_plex(parentmesh)
 
@@ -140,14 +148,14 @@ def test_pic_swarm_in_plex_2d_3procs():
 
 # Mesh Generation Tests
 
-def verify_vertexonly_mesh(m, vm, inputvertexcoords, gdim):
+def verify_vertexonly_mesh(m, vm, inputvertexcoords):
     """
     Check that VertexOnlyMesh `vm` immersed in parent mesh `v` with
     creation coordinates `inputvertexcoords` and geometric dimension
     `gdim` behaves as expected. `inputvertexcoords` should be the same
     for all MPI ranks to avoid hanging.
     """
-    assert m.geometric_dimension() == gdim
+    gdim = m.geometric_dimension()
     # Correct dims
     assert vm.geometric_dimension() == gdim
     assert vm.topological_dimension() == 0
@@ -185,7 +193,6 @@ def verify_vertexonly_mesh(m, vm, inputvertexcoords, gdim):
         assert m.locate_cell(stored_vertex_coords[i]) == stored_parent_cell_nums[i]
 
 
-@pytest.mark.parametrize("parentmesh", parentmeshes)
 def test_generate_cell_midpoints(parentmesh):
     """
     Generate cell midpoints for mesh m and check they lie in the correct cells
@@ -210,28 +217,20 @@ def test_generate_cell_midpoints(parentmesh):
 
 
 @pytest.mark.parallel
-@pytest.mark.parametrize("parentmesh", parentmeshes)
 def test_generate_cell_midpoints_parallel(parentmesh):
     test_generate_cell_midpoints(parentmesh)
 
 
-@pytest.mark.parametrize("parentmesh", parentmeshes)
-@pytest.mark.parametrize("n", ncoords)
-def test_generate_random(parentmesh, n):
-    gdim = parentmesh.geometric_dimension()
-    inputcoords = random_coords(n, gdim)
-    vm = VertexOnlyMesh(parentmesh, inputcoords)
-    verify_vertexonly_mesh(parentmesh, vm, inputcoords, gdim)
+def test_generate_random(parentmesh, vertexcoords):
+    vm = VertexOnlyMesh(parentmesh, vertexcoords)
+    verify_vertexonly_mesh(parentmesh, vm, vertexcoords)
 
 
 @pytest.mark.parallel
-@pytest.mark.parametrize("parentmesh", parentmeshes)
-@pytest.mark.parametrize("n", ncoords)
-def test_generate_random_parallel(parentmesh, n):
-    test_generate_random(parentmesh, n)
+def test_generate_random_parallel(parentmesh, vertexcoords):
+    test_generate_random(parentmesh, vertexcoords)
 
 
-@pytest.mark.parametrize("parentmesh", parentmeshes)
 @pytest.mark.xfail(raises=NotImplementedError)
 def test_extrude(parentmesh):
     inputcoords, inputcoordslocal = cell_midpoints(parentmesh)
@@ -310,26 +309,22 @@ def vectorfunctionspace_tests(vm, family, degree):
     assert np.isclose(assemble(inner(f, f)*dx), num_cells_mpi_global*gdim)
 
 
-"""Families and degrees to test function spaces on VertexOnlyMesh"""
-families_and_degrees = [
-    ("DG", 0),
-    pytest.param("CG", 1, marks=pytest.mark.xfail(reason="unsupported family and degree"))
-]
+@pytest.fixture(params=["DG", pytest.param("CG", marks=pytest.mark.xfail(reason="unsupported family"))])
+def family(request):
+    return request.param
 
 
-@pytest.mark.parametrize("parentmesh", parentmeshes)
-@pytest.mark.parametrize("n", ncoords)
-@pytest.mark.parametrize(("family", "degree"), families_and_degrees)
-def test_functionspaces(parentmesh, n, family, degree):
-    vertexcoords = random_coords(n, parentmesh.geometric_dimension())
+@pytest.fixture(params=[0, pytest.param(1, marks=pytest.mark.xfail(reason="unsupported degree"))])
+def degree(request):
+    return request.param
+
+
+def test_functionspaces(parentmesh, vertexcoords, family, degree):
     vm = VertexOnlyMesh(parentmesh, vertexcoords)
     functionspace_tests(vm, family, degree)
     vectorfunctionspace_tests(vm, family, degree)
 
 
 @pytest.mark.parallel
-@pytest.mark.parametrize("parentmesh", parentmeshes)
-@pytest.mark.parametrize("n", ncoords)
-@pytest.mark.parametrize(("family", "degree"), families_and_degrees)
-def test_functionspaces_parallel(parentmesh, n, family, degree):
-    test_functionspaces(parentmesh, n, family, degree)
+def test_functionspaces_parallel(parentmesh, vertexcoords, family, degree):
+    test_functionspaces(parentmesh, vertexcoords, family, degree)
