@@ -1812,8 +1812,15 @@ def _pic_swarm_in_plex(plex, coords, **kwargs):
     # Note that no new fields can now be associated with the DMSWARM.
 
     # Add point coordinates - note we set redundant mode to False since
-    # all MPI ranks are given the same list of coordinates. This forces
-    # all ranks to search for the given coordinates within their cell.
+    # multiple MPI may be given the same list of coordinates. The cell
+    # DM (`plex`) will then attempt to locate the coordinates within its
+    # rank-local sub domain and disregard those which are outside it.
+    # See https://www.mcs.anl.gov/petsc/petsc-current/docs/manualpages/DMSWARM/DMSwarmSetPointCoordinates.html
+    # for more information. The result is that all DMPlex cells,
+    # including ghost cells on distributed meshes, have the relevent PIC
+    # coordinates associated with them. The DMPlex cell id associated
+    # with each PIC in the DMSwarm is accessed with the `DMSwarm_cellid`
+    # field.
     swarm.setPointCoordinates(coords, redundant=False, mode=PETSc.InsertMode.INSERT_VALUES)
 
     # Remove PICs which have been placed into ghost cells of a distributed DMPlex
