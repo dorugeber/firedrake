@@ -85,7 +85,7 @@ def verify_vertexonly_mesh(m, vm, inputvertexcoords):
     vm.init()
     # Find in-bounds and non-halo-region input coordinates
     in_bounds = []
-    core, owned, ghost = m.cell_set.sizes
+    _, owned, _ = m.cell_set.sizes
     for i in range(len(inputvertexcoords)):
         cell_num = m.locate_cell(inputvertexcoords[i])
         if cell_num is not None and cell_num < owned:
