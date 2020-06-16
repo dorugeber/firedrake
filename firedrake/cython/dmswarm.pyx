@@ -485,8 +485,7 @@ def label_pic_parent_cell_nums(PETSc.DM swarm, parentmesh):
     max_num_vertices = comm.allreduce(num_vertices, op=MPI.MAX)
 
     # Create an out of mesh point to use in locate_cell when needed
-    out_of_mesh_point = np.empty(shape=(1, dim))
-    out_of_mesh_point.fill(np.inf)
+    out_of_mesh_point = np.full((1, dim), np.inf)
 
     # get fields - NOTE aren't copied so could have GC issues!
     swarm_coords = swarm.getField("DMSwarmPIC_coor").reshape((num_vertices, dim))
