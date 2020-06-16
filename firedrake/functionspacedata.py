@@ -156,9 +156,7 @@ def get_entity_node_lists(mesh, key, entity_dofs, global_numbering, offsets):
         def __missing__(self, key):
             if type(mesh.topology) is mesh_mod.VertexOnlyMeshTopology:
                 return self.setdefault(key,
-                                       {mesh.cell_set: lambda: cell_node_list,
-                                        None: None,
-                                        None: None}[key]())
+                                       {mesh.cell_set: lambda: cell_node_list}[key]())
             else:
                 return self.setdefault(key,
                                        {mesh.cell_set: lambda: cell_node_list,
@@ -180,8 +178,6 @@ def get_map_cache(mesh, key):
     """
     if type(mesh.topology) is mesh_mod.VertexOnlyMeshTopology:
         return {mesh.cell_set: None,
-                None: None,
-                None: None,
                 "boundary_node": None}
     else:
         return {mesh.cell_set: None,
