@@ -72,10 +72,10 @@ def pseudo_random_coords(size):
 
 def verify_vertexonly_mesh(m, vm, inputvertexcoords):
     """
-    Check that VertexOnlyMesh `vm` immersed in parent mesh `v` with
-    creation coordinates `inputvertexcoords` and geometric dimension
-    `gdim` behaves as expected. `inputvertexcoords` should be the same
-    for all MPI ranks to avoid hanging.
+    Check that VertexOnlyMesh `vm` immersed in parent mesh `m` with
+    creation coordinates `inputvertexcoords` behaves as expected.
+    `inputvertexcoords` should be the same for all MPI ranks to avoid
+    hanging.
     """
     gdim = m.geometric_dimension()
     # Correct dims
@@ -117,7 +117,8 @@ def verify_vertexonly_mesh(m, vm, inputvertexcoords):
 
 def test_generate_cell_midpoints(parentmesh):
     """
-    Generate cell midpoints for mesh m and check they lie in the correct cells
+    Generate cell midpoints for mesh parentmesh and check they lie in
+    the correct cells
     """
     inputcoords, inputcoordslocal = cell_midpoints(parentmesh)
     vm = VertexOnlyMesh(parentmesh, inputcoords)
