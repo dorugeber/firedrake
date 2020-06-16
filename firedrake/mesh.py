@@ -1692,6 +1692,13 @@ def VertexOnlyMesh(mesh, vertexcoords):
     .. note::
 
         The vertex only mesh uses the same communicator as the input `mesh`.
+
+    .. note::
+
+        Periodic meshes and other meshes created from a coordinates
+        `firedrake.Function` are not supported and may give unexpected
+        results or cause a PETSc error. Immersed manifold meshes are
+        also not yet supported.
     """
 
     import firedrake.functionspace as functionspace
@@ -1708,6 +1715,9 @@ def VertexOnlyMesh(mesh, vertexcoords):
 
     if isinstance(mesh.topology, ExtrudedMeshTopology):
         raise NotImplementedError("Extruded meshes are not supported")
+
+    if gdim != tdim:
+        raise NotImplementedError("Immersed manifold meshes are not supported")
 
     if mesh.coordinates.function_space().ufl_element().degree() > 1:
         raise NotImplementedError("Only straight edged meshes are supported")
