@@ -1710,8 +1710,6 @@ def VertexOnlyMesh(mesh, vertexcoords):
     gdim = mesh.geometric_dimension()
     tdim = mesh.topological_dimension()
     _, pdim = vertexcoords.shape
-    if pdim != tdim:
-        raise ValueError(f"Mesh topological dimension {tdim} must match point list dimension {pdim}")
 
     if isinstance(mesh.topology, ExtrudedMeshTopology):
         raise NotImplementedError("Extruded meshes are not supported")
@@ -1721,6 +1719,9 @@ def VertexOnlyMesh(mesh, vertexcoords):
 
     if mesh.coordinates.function_space().ufl_element().degree() > 1:
         raise NotImplementedError("Only straight edged meshes are supported")
+
+    if pdim != tdim:
+        raise ValueError(f"Mesh topological dimension {tdim} must match point list dimension {pdim}")
 
     swarm = _pic_swarm_in_plex(mesh.topology._plex, vertexcoords, fields=[("parentcellnum", 1, IntType)])
 
