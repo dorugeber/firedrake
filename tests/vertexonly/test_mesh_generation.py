@@ -18,7 +18,7 @@ def cell_midpoints(m):
         raise NotImplementedError("Extruded meshes are not supported")
     m.init()
     V = VectorFunctionSpace(m, "DG", 0)
-    f = Function(V).interpolate(m.coordinates)
+    f = Function(V).interpolate(SpatialCoordinate(m))
     # since mesh may be distributed, the number of cells on the MPI rank
     # may not be the same on all ranks (note we exclude ghost cells
     # hence using num_cells_local = m.cell_set.size). Below local means
@@ -29,7 +29,7 @@ def cell_midpoints(m):
     local_midpoints_size = np.array(local_midpoints.size)
     local_midpoints_sizes = np.empty(MPI.COMM_WORLD.size, dtype=int)
     MPI.COMM_WORLD.Allgatherv(local_midpoints_size, local_midpoints_sizes)
-    midpoints = np.empty((num_cells, m.cell_dimension()), dtype=float)
+    midpoints = np.empty((num_cells, m.ufl_cell().geometric_dimension()), dtype=float)
     MPI.COMM_WORLD.Allgatherv(local_midpoints, (midpoints, local_midpoints_sizes))
     assert len(np.unique(midpoints, axis=0)) == len(midpoints)
     return midpoints, local_midpoints
