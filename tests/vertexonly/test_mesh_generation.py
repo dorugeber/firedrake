@@ -91,8 +91,7 @@ def verify_vertexonly_mesh(m, vm, inputvertexcoords):
         if cell_num is not None and cell_num < owned:
             in_bounds.append(i)
     # Correct coordinates (though not guaranteed to be in same order)
-    assert np.shape(vm.coordinates.dat.data_ro) == np.shape(inputvertexcoords[in_bounds])
-    assert np.all(np.isin(inputvertexcoords[in_bounds], vm.coordinates.dat.data_ro))
+    np.allclose(np.sort(vm.coordinates.dat.data_ro), np.sort(inputvertexcoords[in_bounds]))
     # Correct parent topology
     assert vm._parent_mesh is m
     assert vm.topology._parent_mesh is m.topology
