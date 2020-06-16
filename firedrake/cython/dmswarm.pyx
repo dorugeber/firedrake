@@ -451,7 +451,6 @@ def remove_ghosts_pic(PETSc.DM swarm, PETSc.DM plex):
                 # removePointAtIndex shift cell numbers down by 1
                 swarm.removePointAtIndex(i)
 
-    return
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -502,5 +501,3 @@ def label_pic_parent_cell_nums(PETSc.DM swarm, parentmesh):
     # have to restore fields once accessed to allow access again
     swarm.restoreField("parentcellnum")
     swarm.restoreField("DMSwarmPIC_coor")
-
-    return
