@@ -38,7 +38,10 @@ def cell_midpoints(m):
 @pytest.fixture(params=[pytest.param("interval", marks=pytest.mark.xfail(reason="swarm not implemented in 1d")),
                         "square",
                         pytest.param("extruded", marks=pytest.mark.xfail(reason="extruded meshes not supported")),
-                        "cube"])
+                        "cube",
+                        "tetrahedron",
+                        pytest.param("immersedsphere", marks=pytest.mark.xfail(reason="immersed parent meshes not supported")),
+                        "periodicrectangle"])
 def parentmesh(request):
     if request.param == "interval":
         return UnitIntervalMesh(1)
@@ -48,6 +51,12 @@ def parentmesh(request):
         return ExtrudedMesh(UnitSquareMesh(1, 1), 1)
     elif request.param == "cube":
         return UnitCubeMesh(1, 1, 1)
+    elif request.param == "tetrahedron":
+        return UnitTetrahedronMesh()
+    elif request.param == "immersedsphere":
+        return UnitIcosahedralSphereMesh()
+    elif request.param == "periodicrectangle":
+        return PeriodicRectangleMesh(3, 3, 1, 1)
 
 
 @pytest.fixture(params=[0, 1, 100], ids=lambda x: f"{x}-coords")
