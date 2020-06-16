@@ -382,7 +382,8 @@ def reordered_coords(PETSc.DM swarm, PETSc.Section global_numbering, shape):
         PetscInt i, dim = shape[1]
         np.ndarray[PetscReal, ndim=2, mode="c"] swarm_coords, coords
 
-    # get coords field - NOTE it isn't copied so could have GC issues!
+    # get coords field - NOTE this isn't copied so make sure
+    # swarm.restoreField is called too!
     swarm_coords = swarm.getField("DMSwarmPIC_coor").reshape(shape)
     coords = np.empty_like(swarm_coords)
     vStart = 0
@@ -486,7 +487,8 @@ def label_pic_parent_cell_nums(PETSc.DM swarm, parentmesh):
     # Create an out of mesh point to use in locate_cell when needed
     out_of_mesh_point = np.full((1, dim), np.inf)
 
-    # get fields - NOTE aren't copied so could have GC issues!
+    # get fields - NOTE this isn't copied so make sure
+    # swarm.restoreField is called for each field too!
     swarm_coords = swarm.getField("DMSwarmPIC_coor").reshape((num_vertices, dim))
     parent_cell_nums = swarm.getField("parentcellnum")
 
