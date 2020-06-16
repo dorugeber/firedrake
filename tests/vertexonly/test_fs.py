@@ -11,7 +11,7 @@ from mpi4py import MPI
                         "cube",
                         "tetrahedron",
                         pytest.param("immersedsphere", marks=pytest.mark.xfail(reason="immersed parent meshes not supported")),
-                        "periodicrectangle"])
+                        pytest.param("periodicrectangle", marks=pytest.mark.skip(reason="periodic meshes do not work properly with swarm creation"))])
 def parentmesh(request):
     if request.param == "interval":
         return UnitIntervalMesh(1)

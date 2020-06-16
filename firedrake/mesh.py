@@ -1833,6 +1833,8 @@ def _pic_swarm_in_plex(plex, coords, **kwargs):
     # coordinates associated with them. The DMPlex cell id associated
     # with each PIC in the DMSwarm is accessed with the `DMSwarm_cellid`
     # field.
+    # NOTE This does not work correctly for periodic meshes for unknown
+    # reasons.
     swarm.setPointCoordinates(coords, redundant=False, mode=PETSc.InsertMode.INSERT_VALUES)
 
     # Remove PICs which have been placed into ghost cells of a distributed DMPlex
