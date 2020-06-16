@@ -40,7 +40,7 @@ def cell_midpoints(m):
                         pytest.param("extruded", marks=pytest.mark.xfail(reason="extruded meshes not supported")),
                         "cube",
                         "tetrahedron",
-                        pytest.param("immersedsphere", marks=pytest.mark.xfail(reason="immersed parent meshes not supported")),
+                        pytest.param("immersedsphere", marks=pytest.mark.skip(reason="immersed parent meshes not supported and will segfault PETSc when creating the DMSwarm")),
                         pytest.param("periodicrectangle", marks=pytest.mark.skip(reason="periodic meshes do not work properly with swarm creation"))])
 def parentmesh(request):
     if request.param == "interval":
