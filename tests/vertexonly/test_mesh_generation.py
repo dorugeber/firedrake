@@ -124,7 +124,7 @@ def test_generate_cell_midpoints(parentmesh):
     vm = VertexOnlyMesh(parentmesh, inputcoords)
     # Midpoints located in correct cells of parent mesh
     V = VectorFunctionSpace(parentmesh, "DG", 0)
-    f = Function(V).interpolate(parentmesh.coordinates)
+    f = Function(V).interpolate(SpatialCoordinate(parentmesh))
     # Check size of biggest len(vm.coordinates.dat.data_ro) so
     # locate_cell can be called on every processor
     max_len = MPI.COMM_WORLD.allreduce(len(vm.coordinates.dat.data_ro), op=MPI.MAX)
