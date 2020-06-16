@@ -482,7 +482,7 @@ def label_pic_parent_cell_nums(PETSc.DM swarm, parentmesh):
     # Check size of biggest num_vertices so
     # locate_cell can be called on every processor
     comm = swarm.comm.tompi4py()
-    max_num_vertices = comm.allreduce(num_vertices, op=MPI.SUM)
+    max_num_vertices = comm.allreduce(num_vertices, op=MPI.MAX)
 
     # Create an out of mesh point to use in locate_cell when needed
     out_of_mesh_point = np.empty(shape=(1, dim))

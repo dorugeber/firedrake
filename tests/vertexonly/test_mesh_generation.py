@@ -126,9 +126,9 @@ def test_generate_cell_midpoints(parentmesh):
     f = Function(V).interpolate(parentmesh.coordinates)
     # Check size of biggest len(vm.coordinates.dat.data_ro) so
     # locate_cell can be called on every processor
-    max_len = MPI.COMM_WORLD.allreduce(len(vm.coordinates.dat.data_ro), op=MPI.SUM)
     out_of_mesh_point = np.empty(shape=(1, parentmesh.geometric_dimension()))
     out_of_mesh_point.fill(np.inf)
+    max_len = MPI.COMM_WORLD.allreduce(len(vm.coordinates.dat.data_ro), op=MPI.MAX)
     for i in range(max_len):
         if i < len(vm.coordinates.dat.data_ro):
             cell_num = parentmesh.locate_cell(vm.coordinates.dat.data_ro[i])
