@@ -1105,7 +1105,10 @@ class VertexOnlyMeshTopology(MeshTopology):
                                         cell_numbering, entity_per_cell)
 
     def _facets(self, kind):
-        return None
+        """Raises an AttributeError since cells in a
+        `VertexOnlyMeshTopology` have no facets.
+        """
+        raise AttributeError("Cells in a VertexOnlyMeshTopology have no facets.")
 
     @utils.cached_property
     def cell_to_facets(self):
