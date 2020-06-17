@@ -117,22 +117,21 @@ def vectorfunctionspace_tests(vm, family, degree):
     assert np.isclose(assemble(inner(f, f)*dx), num_cells_mpi_global*gdim)
 
 
-@pytest.fixture(params=["DG", pytest.param("CG", marks=pytest.mark.xfail(reason="unsupported family"))])
-def family(request):
-    return request.param
+@pytest.fixture(params=["DG0", pytest.param("CG1", marks=pytest.mark.xfail(reason="unsupported family and degree"))])
+def family_and_degree(request):
+    if request.param == "DG0":
+        return ("DG", 0)
+    elif request.param == "CG1":
+        return ("CG", 1)
 
 
-@pytest.fixture(params=[0, pytest.param(1, marks=pytest.mark.xfail(reason="unsupported degree"))])
-def degree(request):
-    return request.param
-
-
-def test_functionspaces(parentmesh, vertexcoords, family, degree):
+def test_functionspaces(parentmesh, vertexcoords, family_and_degree):
     vm = VertexOnlyMesh(parentmesh, vertexcoords)
+    family, degree = family_and_degree
     functionspace_tests(vm, family, degree)
     vectorfunctionspace_tests(vm, family, degree)
 
 
 @pytest.mark.parallel
-def test_functionspaces_parallel(parentmesh, vertexcoords, family, degree):
-    test_functionspaces(parentmesh, vertexcoords, family, degree)
+def test_functionspaces_parallel(parentmesh, vertexcoords, family_and_degree):
+    test_functionspaces(parentmesh, vertexcoords, family_and_degree)
