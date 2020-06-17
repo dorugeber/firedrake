@@ -41,7 +41,7 @@ def cell_midpoints(m):
                         "cube",
                         "tetrahedron",
                         pytest.param("immersedsphere", marks=pytest.mark.xfail(reason="immersed parent meshes not supported")),
-                        pytest.param("periodicrectangle", marks=pytest.mark.skip(reason="periodic meshes do not work properly with swarm creation"))])
+                        pytest.param("periodicrectangle", marks=pytest.mark.xfail(reason="meshes made from coordinate fields are not supported"))])
 def parentmesh(request):
     if request.param == "interval":
         return UnitIntervalMesh(1)

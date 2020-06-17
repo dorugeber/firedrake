@@ -1427,6 +1427,8 @@ def make_mesh_from_coordinates(coordinates):
 
     mesh = MeshGeometry.__new__(MeshGeometry, element)
     mesh.__init__(coordinates)
+    # Mark mesh as being made from coordinates
+    mesh._made_from_coordinates = True
     return mesh
 
 
@@ -1699,10 +1701,8 @@ def VertexOnlyMesh(mesh, vertexcoords):
 
     .. note::
 
-        Periodic meshes and other meshes created from a coordinates
-        `firedrake.Function` are not supported and may give unexpected
-        results or cause a PETSc error. Immersed manifold meshes are
-        also not yet supported.
+        Meshes created from a coordinates `firedrake.Function` and immersed
+        manifold meshes are not yet supported.
     """
 
     import firedrake.functionspace as functionspace
@@ -1723,6 +1723,9 @@ def VertexOnlyMesh(mesh, vertexcoords):
 
     if mesh.coordinates.function_space().ufl_element().degree() > 1:
         raise NotImplementedError("Only straight edged meshes are supported")
+
+    if hasattr(mesh, "_made_from_coordinates") and mesh._made_from_coordinates:
+        raise NotImplementedError("Meshes made from coordinate fields are not yet supported")
 
     if pdim != tdim:
         raise ValueError(f"Mesh topological dimension {tdim} must match point list dimension {pdim}")
