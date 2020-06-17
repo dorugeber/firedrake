@@ -1032,8 +1032,9 @@ class VertexOnlyMeshTopology(MeshTopology):
         :arg name: name of the mesh
         :arg reorder: whether to reorder the mesh (bool)
         """
-        # Do some validation of the input DMSwarm
 
+        # TODO: As a performance optimisation, we should renumber the
+        # swarm to in parent-cell order so that we traverse efficiently.
         if reorder is True:
             raise NotImplementedError("Mesh reordering not implemented for vertex only meshes yet.")
 
