@@ -177,8 +177,7 @@ def get_map_cache(mesh, key):
         fs x Real tensorproduct.
     """
     if type(mesh.topology) is mesh_mod.VertexOnlyMeshTopology:
-        return {mesh.cell_set: None,
-                "boundary_node": None}
+        return {mesh.cell_set: None}
     else:
         return {mesh.cell_set: None,
                 mesh.interior_facets.set: None,
