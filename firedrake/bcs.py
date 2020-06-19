@@ -26,7 +26,7 @@ from firedrake import replace
 from firedrake import solving
 from firedrake.adjoint.dirichletbc import DirichletBCMixin
 
-__all__ = ['DirichletBC', 'homogenize', 'EquationBC', 'extract_equation_bc_forms']
+__all__ = ['DirichletBC', 'homogenize', 'EquationBC']
 
 
 class BCBase(object):
@@ -242,6 +242,10 @@ class BCBase(object):
         for bc in itertools.chain(*self.bcs):
             bc._bc_depth += 1
 
+    def extract_forms(self, form_type):
+        # Return boundary condition objects actually used in assembly.
+        raise NotImplementedError("Method to extract form objects not implemented.")
+
 
 class DirichletBC(BCBase, DirichletBCMixin):
     r'''Implementation of a strong Dirichlet boundary condition.
@@ -436,6 +440,10 @@ class DirichletBC(BCBase, DirichletBCMixin):
     def integrals(self):
         return []
 
+    def extract_form(self, form_type):
+        # DirichletBC is directly used in assembly.
+        return self
+
 
 class EquationBC(object):
     r'''Construct and store EquationBCSplit objects (for `F`, `J`, and `Jp`).
@@ -514,6 +522,16 @@ class EquationBC(object):
     def dirichlet_bcs(self):
         # _F, _J, and _Jp all have the same DirichletBCs
         yield from self._F.dirichlet_bcs()
+
+    def extract_form(self, form_type):
+        r"""Return :class:`.EquationBCSplit` associated with the given 'form_type'.
+
+        :arg form_type: Form to extract; 'F', 'J', or 'Jp'.
+        """
+        if form_type not in {"F", "J", "Jp"}:
+            raise ValueError("Unknown form_type: 'form_type' must be 'F', 'J', or 'Jp'.")
+        else:
+            return getattr(self, f"_{form_type}")
 
     def reconstruct(self, V, subu, u, field):
         _F = self._F.reconstruct(field=field, V=V, subu=subu, u=u)
@@ -630,23 +648,3 @@ def homogenize(bc):
         return DirichletBC(bc.function_space(), 0, bc.sub_domain)
     else:
         raise TypeError("homogenize only takes a DirichletBC or a list/tuple of DirichletBCs")
-
-
-def extract_equation_bc_forms(bcs, form_type):
-    r"""Collect :class:`.EquationBCSplit`s from :class:`.EquationBC`s.
-
-    :arg bcs: Boundary condition object(s) used in assembly.
-       If :class:`.EquationBC`s are found, appropriate instances of
-       :class:`.EquationBCSplit`s are extracted.
-    :arg form_type: Form to assemble; 'F', 'J', or 'Jp'.
-    """
-    from firedrake.solving import _extract_bcs
-    bcs = _extract_bcs(bcs)
-    if form_type == 'F':
-        return tuple(bc if isinstance(bc, DirichletBC) else bc._F for bc in bcs)
-    elif form_type == 'J':
-        return tuple(bc if isinstance(bc, DirichletBC) else bc._J for bc in bcs)
-    elif form_type == 'Jp':
-        return tuple(bc if isinstance(bc, DirichletBC) else bc._Jp for bc in bcs)
-    else:
-        raise TypeError("Unknown form_type: 'form_type' must be 'F', 'J', or 'Jp'.")

@@ -82,7 +82,6 @@ class _SNESContext(object):
                  options_prefix=None,
                  transfer_manager=None):
         from firedrake.assemble import create_assembly_callable
-        from firedrake.bcs import extract_equation_bc_forms
         if pmat_type is None:
             pmat_type = mat_type
         self.mat_type = mat_type
@@ -132,9 +131,9 @@ class _SNESContext(object):
             # pmat_type == mat_type and Jp_eq_J
             self.Jp = None
 
-        self.bcs_F = extract_equation_bc_forms(problem.bcs, 'F')
-        self.bcs_J = extract_equation_bc_forms(problem.bcs, 'J')
-        self.bcs_Jp = extract_equation_bc_forms(problem.bcs, 'Jp')
+        self.bcs_F = tuple(bc.extract_form('F') for bc in problem.bcs)
+        self.bcs_J = tuple(bc.extract_form('J') for bc in problem.bcs)
+        self.bcs_Jp = tuple(bc.extract_form('Jp') for bc in problem.bcs)
         self._assemble_residual = create_assembly_callable(self.F,
                                                            tensor=self._F,
                                                            bcs=self.bcs_F,

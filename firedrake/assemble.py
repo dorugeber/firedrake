@@ -15,7 +15,7 @@ from firedrake import solving
 from firedrake import utils
 from firedrake.slate import slate
 from firedrake.slate import slac
-from firedrake.bcs import DirichletBC, EquationBC, EquationBCSplit, extract_equation_bc_forms
+from firedrake.bcs import DirichletBC, EquationBC, EquationBCSplit
 from firedrake.utils import ScalarType
 from firedrake.adjoint import annotate_assemble
 
@@ -246,13 +246,10 @@ def _assemble(f, tensor=None, bcs=None, form_compiler_parameters=None,
         if bcs is not None:
             if any(isinstance(bc, EquationBC) for bc in bcs):
                 if rank == 1:
-                    bcs = extract_equation_bc_forms(bcs, 'F')
+                    bcs = tuple(bc.extract_form('F') for bc in bcs)
                 elif rank == 2:
-                    raise RuntimeError("Unable to infer 'form_type' to be used ('J' or 'Jp'): \
-Preprocess `bcs` either with: \
-`bcs = extract_equation_bc_forms(bcs, 'J')`, \
-or with \
-`bcs = extract_equation_bc_forms(bcs, 'Jp')`.")
+                    raise TypeError("`EquationBC` object(s) not expected: "
+                                    "Preprocess with, for instance, `bc.extract_form('Jp')`.")
             for bc in bcs:
                 integral_types += [integral.integral_type() for integral in bc.integrals()]
 
