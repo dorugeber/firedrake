@@ -419,8 +419,7 @@ def remove_ghosts_pic(PETSc.DM swarm, PETSc.DM plex):
         np.ndarray[PetscInt, ndim=1, mode="c"] pic_cell_indices
         np.ndarray[PetscInt, ndim=1, mode="c"] ghost_cell_indices
 
-    # check doesn't work right now
-    # assert plex is swarm.getCellDM().dm
+    assert plex.handle == swarm.getCellDM().handle
 
     if plex.comm.size > 1:
 
